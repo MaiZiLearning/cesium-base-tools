@@ -1,5 +1,5 @@
 {
-  "name": "cesium-heightmap-examples",
+  "name": "cesium-base-tools",
   "private": true,
   "version": "1.0.0",
   "description": "Cesium open-source examples built with Vue 3 and Vite",
