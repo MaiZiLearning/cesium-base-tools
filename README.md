@@ -2,9 +2,9 @@
 
 `cesium-base-tools` 是一个基于 Vue 3、Vite 和 Cesium 构建的开源 WebGIS 示例与工具集合，持续整理 Cesium 场景能力、数据处理方式和可复用的底层工具。
 
-当前版本暂时只有一个可独立运行的**地形高度图示例**：从 Cesium World Terrain 加载地形瓦片，在 GPU 离屏渲染高度纹理，并将结果以图层形式叠加回 Cesium 场景中。示例同时提供高度图预览、采样点标注和参数调节面板，适合用于学习 Cesium 地形数据处理、WebGL 纹理渲染以及 Vue 组件集成。
+当前版本包含两个可独立运行的高度图示例：一个用于演示 Cesium World Terrain 的地形高度图，另一个用于演示地形与 3D Tiles 合成表面的离屏高度图。示例提供高度图预览、采样点标注和参数调节面板，适合用于学习 Cesium 地形数据处理、3D Tiles 场景渲染、WebGL 纹理处理以及 Vue 组件集成。
 
-> 项目目前处于持续整理和扩展阶段。高度图只是当前的第一个示例，后续会逐步加入更多独立的 Cesium 示例和工具。
+> 项目目前处于持续整理和扩展阶段，后续会逐步加入更多独立的 Cesium 示例和工具。
 
 ## 项目内容
 
@@ -12,11 +12,9 @@
 
 当前已收录的示例如下。
 
-## 已有示例
-
 ### 地形高度图
 
-访问 `/height-map` 查看地形高度图示例，当前支持：
+访问 `/height-map` 查看基础地形高度图示例，当前支持：
 
 - 从 Cesium World Terrain 加载真实地形数据
 - 在 `256 x 256`、`512 x 512` 和 `1024 x 1024` 三种分辨率之间切换
@@ -26,6 +24,19 @@
 - 标注区域中心、西南角和东北角的采样高度
 - 调整图层显隐和透明度，并快速定位到目标区域
 - 使用 Tweakpane 查看生成状态、纹理尺寸和实际高度范围
+
+### 离屏渲染高度图
+
+访问 `/offscreen-height-map` 查看地形与 3D Tiles 合成高度图示例，当前支持：
+
+- 加载 Cesium World Terrain 和公开 3D Tiles 模型
+- 根据 3D Tiles 的 `boundingSphere` 自动计算高度图覆盖范围
+- 使用 Cesium Picking 离屏渲染获取地形、3D Tiles 等可见几何的合成深度
+- 手动触发高度图生成，不会在 3D Tiles 初始化时自动生成
+- 将含有建筑物高度信息的灰度图贴回模型所在区域
+- 显示高度图预览、中心/边界采样点和模型测试点高度
+- 可选显示离屏正交相机，辅助检查相机覆盖范围
+- 切换 3D Tiles 显隐，重新生成高度图以对比模型和纯地形结果
 
 ## 技术栈
 
@@ -78,7 +89,7 @@ Copy-Item .env.example .env.local
 npm run dev
 ```
 
-打开 <http://127.0.0.1:5173/>，应用会自动跳转到当前示例；也可以直接访问 <http://127.0.0.1:5173/height-map>。
+打开 <http://127.0.0.1:5173/>，应用会自动跳转到当前示例；也可以直接访问 <http://127.0.0.1:5173/height-map> 或 <http://127.0.0.1:5173/offscreen-height-map>。
 
 ### 4. 构建和预览生产版本
 
@@ -111,27 +122,34 @@ npm run preview
     │   └── examples.js                 # 示例导航元数据
     ├── router/
     │   └── index.js                    # 示例路由
+    ├── lib/
+    │   ├── heightmap/
+    │   │   ├── HeightMapGenerator.js
+    │   │   └── HeightMapVisualizer.js  # 两个高度图示例共用
+    │   └── offscreen-heightmap/
+    │       └── OffscreenHeightMapGenerator.js
     └── views/
-        └── heightmap/
-            ├── HeightMap.vue           # 高度图示例页面
-            ├── js/
-            │   └── HeightMapMapWorks.js # Viewer 生命周期和交互控制
-            └── lib/
-                ├── HeightMapGenerator.js
-                └── HeightMapVisualizer.js
+        ├── heightmap/
+        │   ├── HeightMap.vue           # 地形高度图示例页面
+        │   └── js/
+        │       └── HeightMapMapWorks.js # Viewer 生命周期和交互控制
+        └── offscreen-heightmap/
+            ├── OffscreenHeightMap.vue  # 离屏高度图示例页面
+            └── js/
+                └── OffscreenHeightMapMapWorks.js
 ```
 
 ## 添加新的示例
 
 每个示例应尽量保持独立，推荐按以下步骤添加：
 
-1. 在 `src/views/<example-name>/` 下创建页面及相关逻辑。
+1. 在 `src/views/<example-name>/` 下创建页面和示例专属的状态、交互逻辑。
 2. 在 `src/router/index.js` 中注册路由。
 3. 在 `src/config/examples.js` 中添加导航元数据。
-4. 将示例专用的 Cesium 逻辑放在自己的 `js/` 或 `lib/` 目录中。
+4. 将地图初始化、事件协调和示例流程放在对应示例的 `js/` 目录中；可复用或较复杂的算法、渲染实现放在 `src/lib/<feature>/` 中。
 5. 在本地运行 `npm run build`，确认生产构建正常完成。
 
-示例可以参考 `src/views/heightmap/` 的组织方式。页面组件负责生命周期管理，地图初始化和销毁逻辑集中在 `js/` 中，较复杂的算法或渲染逻辑放在 `lib/` 中。
+示例可以参考 `src/views/heightmap/` 和 `src/views/offscreen-heightmap/` 的组织方式。页面组件负责生命周期管理，示例的地图编排逻辑集中在 `js/` 中，公共算法和渲染实现集中在 `src/lib/` 中。多个示例需要使用同一功能时，应直接复用公共实现，避免在示例目录中维护重复文件。
 
 ## Cesium Token 和地形加载
 

@@ -7,8 +7,8 @@
  * - 导出 initMap / destroy 供 Vue 组件调用
  */
 import { Pane } from "tweakpane";
-import HeightMapGenerator from "../lib/HeightMapGenerator.js";
-import HeightMapVisualizer from "../lib/HeightMapVisualizer.js";
+import HeightMapGenerator from "@/lib/heightmap/HeightMapGenerator.js";
+import HeightMapVisualizer from "@/lib/heightmap/HeightMapVisualizer.js";
 
 const TEST_REGIONS = {
   mountains: [
