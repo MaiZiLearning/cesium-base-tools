@@ -24,7 +24,7 @@ const params = {
   show: true,
   showTileset: true,
   showOffscreenCamera: false,
-  status: "等待地形瓦片加载",
+  status: "等待 3DTiles 加载",
   size: "-",
   heightRange: "-",
 };
@@ -40,6 +40,7 @@ let taskGeneration = 0;
 let generateTimer = null;
 let sampleTimer = null;
 let offscreenCameraPrimitive = null;
+let cancelTilesetReadyWait = null;
 
 let scgisTileset = null;
 let scgisBoundingSphere = null;
@@ -132,6 +133,90 @@ function flyToRegion(boundingSphere, generation) {
         }
         resolve(false);
       });
+  });
+}
+
+function waitForTilesetReady(tileset, generation) {
+  cancelTilesetReadyWait?.();
+
+  return new Promise((resolve) => {
+    const scene = viewer?.scene;
+    if (
+      !scene ||
+      viewer.isDestroyed() ||
+      !tileset ||
+      generation !== tilesetLoadGeneration
+    ) {
+      resolve(false);
+      return;
+    }
+
+    let visibleTile = false;
+    let renderedFrame = false;
+    let stableFrames = 0;
+    let settled = false;
+    let removePreRender = null;
+    let removePostRender = null;
+    let removeTileVisible = null;
+    let removeAllTilesLoaded = null;
+    let cancel = () => finish(false);
+    cancelTilesetReadyWait = cancel;
+
+    const cleanup = () => {
+      removePreRender?.();
+      removePostRender?.();
+      removeTileVisible?.();
+      removeAllTilesLoaded?.();
+      if (cancelTilesetReadyWait === cancel) cancelTilesetReadyWait = null;
+    };
+
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(result);
+    };
+
+    const checkReady = () => {
+      if (
+        settled ||
+        !viewer ||
+        viewer.isDestroyed() ||
+        generation !== tilesetLoadGeneration
+      ) {
+        finish(false);
+        return;
+      }
+
+      // tilesLoaded 只在一次完整遍历和渲染后更新，不能在 requestRender 后同步读取。
+      if (tileset.show && renderedFrame && visibleTile && tileset.tilesLoaded === true) {
+        stableFrames++;
+        if (stableFrames >= 3) {
+          finish(true);
+          return;
+        }
+      } else {
+        stableFrames = 0;
+      }
+      scene.requestRender();
+    };
+
+    removePreRender = scene.preRender.addEventListener(() => {
+      renderedFrame = true;
+    });
+    removeTileVisible =
+      tileset.tileVisible?.addEventListener?.(() => {
+        visibleTile = true;
+      }) ?? null;
+    removeAllTilesLoaded =
+      tileset.allTilesLoaded?.addEventListener?.(() => {
+        scene.requestRender();
+      }) ?? null;
+    removePostRender = scene.postRender.addEventListener(checkReady);
+
+    // forceRender 确保等待从目标相机的真实渲染帧开始，而不是只设置请求标志。
+    if (typeof scene.forceRender === "function") scene.forceRender();
+    else scene.requestRender();
   });
 }
 
@@ -306,7 +391,7 @@ function load3DTiles() {
 
     scgisTileset = loadedTileset;
     viewer.scene.primitives.add(loadedTileset);
-    loadedTileset.show = params.showTileset;
+    loadedTileset.show = true;
     if (loadedTileset.readyPromise) {
       await loadedTileset.readyPromise;
     }
@@ -342,10 +427,18 @@ function load3DTiles() {
 
     tilesetRectangle = rectangle;
     generator?.setTileset?.(loadedTileset);
+    setStatus("3DTiles 已定位，正在请求可见瓦片...", "loading");
     await flyToBoundingSphere(scgisBoundingSphere);
-    if (!viewer || viewer.isDestroyed()) {
-      throw new Error("Viewer 在 3DTiles 定位前已销毁");
+    if (!viewer || viewer.isDestroyed() || loadGeneration !== tilesetLoadGeneration) {
+      throw new Error("3DTiles 加载任务已取消");
     }
+    if (!(await waitForTilesetReady(loadedTileset, loadGeneration))) {
+      throw new Error("3DTiles 加载任务已取消");
+    }
+    if (!viewer || viewer.isDestroyed() || loadGeneration !== tilesetLoadGeneration) {
+      throw new Error("3DTiles 加载任务已取消");
+    }
+    loadedTileset.show = params.showTileset;
     viewer.scene.requestRender();
     updateOffscreenCameraDebug();
     tilesetsReady = true;
@@ -353,20 +446,26 @@ function load3DTiles() {
       "[3DTiles] 公开 Tileset 已加载，正在请求可见瓦片",
       SCGIS_TILESET_URL,
     );
+    setStatus("3DTiles 已定位，请点击“重新生成高度图”", "success");
     refreshPane();
     return rectangle;
   })();
 
   tilesetsReadyPromise = requestPromise.catch((error) => {
-    console.error("[3DTiles] 公开 Tileset 加载失败", error);
+    const isCurrentLoad = loadGeneration === tilesetLoadGeneration;
+    if (isCurrentLoad) {
+      console.error("[3DTiles] 公开 Tileset 加载失败", error);
+    }
     if (loadedTileset && viewer && !viewer.isDestroyed()) {
       try { viewer.scene.primitives.remove(loadedTileset); } catch (_) {}
       try { loadedTileset.destroy(); } catch (_) {}
     }
-    if (scgisTileset === loadedTileset) scgisTileset = null;
-    tilesetRectangle = null;
-    tilesetsReady = false;
-    tilesetsReadyPromise = null;
+    if (isCurrentLoad) {
+      if (scgisTileset === loadedTileset) scgisTileset = null;
+      tilesetRectangle = null;
+      tilesetsReady = false;
+      tilesetsReadyPromise = null;
+    }
     throw error;
   });
 
@@ -380,6 +479,7 @@ function setTilesetVisible(visible) {
 }
 
 function remove3DTiles() {
+  cancelTilesetReadyWait?.();
   ++tilesetLoadGeneration;
   if (regionEntity && viewer && !viewer.isDestroyed()) {
     viewer.entities.remove(regionEntity);
@@ -450,6 +550,7 @@ function initGui(generate) {
     setStatus("正在重新加载 3DTiles...", "loading");
     try {
       await load3DTiles();
+      if (generation !== guiGeneration) return;
       setStatus("3DTiles 已定位，请点击“重新生成高度图”", "success");
     } catch (error) {
       setStatus(`3DTiles 加载失败：${error?.message || "请重试"}`, "error");
@@ -528,7 +629,7 @@ function generateHeightMap() {
       return;
     }
 
-    setStatus("等待 3DTiles/地形就绪后离屏渲染中..", "loading");
+    setStatus("等待 3DTiles 渲染后进行离屏渲染..", "loading");
     generateTimer = window.setTimeout(async () => {
       if (!viewer || viewer.isDestroyed() || generation !== taskGeneration) return;
       try {
@@ -607,6 +708,7 @@ export function initMap(container, elements) {
         heightAbove: 5000,
         near: 0.1,
         far: 10000,
+        // 示例重点是演示 3DTiles 离屏渲染，不强制等待地形瓦片全部就绪。
         waitForTerrain: false,
       });
       visualizer = new HeightMapVisualizer(viewer, generator);

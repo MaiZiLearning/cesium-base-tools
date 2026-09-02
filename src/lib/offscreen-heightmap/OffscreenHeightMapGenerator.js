@@ -31,7 +31,7 @@ const PACKED_DEPTH_SCALE = new Cesium.Cartesian4(
  * @param {number} [options.heightAbove=5000] - 离屏相机悬浮高度（米）
  * @param {number} [options.near=0.1] - 正交视锥 near（米）
  * @param {number} [options.far=10000] - 正交视锥 far（米）
- * @param {boolean} [options.waitForTerrain=true] - generate 时是否等待地形瓦片加载
+ * @param {boolean} [options.waitForTerrain=false] - generate 时是否等待地形瓦片加载
  * @param {number} [options.terrainTimeoutMs=30000] - 等待地形超时（毫秒）
  * @param {boolean} [options.bilinearSample=true] - sampleHeight 是否双线性插值
  * @param {Cesium.BoundingSphere} [options.boundingSphere] - 3DTiles 包围球（用于调试和定位）
@@ -50,7 +50,7 @@ function OffscreenHeightMapGenerator(viewer, options) {
   this._heightAbove = options.heightAbove ?? 5000;
   this._near = options.near ?? 0.1;
   this._far = options.far ?? 10000;
-  this._waitForTerrain = options.waitForTerrain !== false;
+  this._waitForTerrain = options.waitForTerrain === true;
   this._terrainTimeoutMs = options.terrainTimeoutMs ?? 30000;
   this._useBilinearSample = options.bilinearSample !== false;
   this._boundingSphere = options.boundingSphere ?? null;
@@ -447,10 +447,10 @@ OffscreenHeightMapGenerator.prototype._waitForTerrainLoaded = async function () 
   return renderedFrame;
 };
 
-/**
-  // 使用离屏相机执行完整的 Cesium 渲染流程。
-  // 这样地形 Quadtree 和可见 3DTiles 都会按目标相机进行遍历，
-  // 而不是依赖不会主动请求缺失瓦片的 PICK 通道。
+/*
+ * 使用离屏相机执行完整的 Cesium 渲染流程。
+ * 这样地形 Quadtree 和可见 3DTiles 都会按目标相机进行遍历，
+ * 而不是依赖不会主动请求缺失瓦片的 PICK 通道。
  */
 OffscreenHeightMapGenerator.prototype._renderPreloadFrame = function () {
   if (
