@@ -17,4 +17,11 @@ export const examples = [
     description: "通过 Cesium Picking 离屏渲染获取场景高度图（地形+3DTiles合成表面）。",
     category: "示例",
   },
+  {
+    path: "/normal-map",
+    title: "后处理法线图",
+    icon: "◈",
+    description: "通过后处理深度纹理重建视空间法线，并以 RGB 颜色显示。",
+    category: "示例",
+  },
 ];

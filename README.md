@@ -2,7 +2,7 @@
 
 `cesium-base-tools` 是一个基于 Vue 3、Vite 和 Cesium 构建的开源 WebGIS 示例与工具集合，持续整理 Cesium 场景能力、数据处理方式和可复用的底层工具。
 
-当前版本包含两个可独立运行的高度图示例：一个用于演示 Cesium World Terrain 的地形高度图，另一个用于演示地形与 3D Tiles 合成表面的离屏高度图。示例提供高度图预览、采样点标注和参数调节面板，适合用于学习 Cesium 地形数据处理、3D Tiles 场景渲染、WebGL 纹理处理以及 Vue 组件集成。
+当前版本包含两个可独立运行的高度图示例和一个后处理法线图示例：两个高度图示例分别用于演示 Cesium World Terrain 的地形高度图，以及地形与 3D Tiles 合成表面的离屏高度图；法线图示例用于演示从场景深度纹理重建视空间法线。高度图示例提供高度图预览、采样点标注和参数调节面板，法线图示例提供法线 RGB 可视化，适合用于学习 Cesium 地形数据处理、3D Tiles 场景渲染、WebGL 纹理处理、后处理和 Vue 组件集成。
 
 > 项目目前处于持续整理和扩展阶段，后续会逐步加入更多独立的 Cesium 示例和工具。
 
@@ -37,6 +37,22 @@
 - 显示高度图预览、中心/边界采样点和模型测试点高度
 - 可选显示离屏正交相机，辅助检查相机覆盖范围
 - 切换 3D Tiles 显隐，重新生成高度图以对比模型和纯地形结果
+
+### 后处理法线图
+
+访问 `/normal-map` 查看使用公开 3D Tiles 模型的后处理视空间法线示例，当前支持：
+
+- 加载 `src/views/offscreen-heightmap/js/OffscreenHeightMapMapWorks.js` 中使用的公开 3D Tiles 模型
+- 不依赖 Cesium World Terrain，直接对模型渲染结果执行后处理
+- 使用 Tweakpane 控制“开启法线模式”开关
+- 使用后处理阶段读取 Cesium 场景深度纹理
+- 通过 `czm_windowToEyeCoordinates` 将中心及四邻域深度还原为视空间位置
+- 使用相邻位置差的叉乘计算视空间法线，并进行方向校正
+- 将法线的 X/Y/Z 分量编码为 RGB 颜色显示
+- 使用特殊背景色标识没有有效深度的天空区域
+- 通过图例说明 RGB 与视空间法线分量的对应关系
+- 关闭法线模式时恢复 3D Tiles 原始画面
+- 独立展示法线重建，不包含 SSR 的光线步进、反射采样和反射合成
 
 ## 技术栈
 
@@ -89,7 +105,7 @@ Copy-Item .env.example .env.local
 npm run dev
 ```
 
-打开 <http://127.0.0.1:5173/>，应用会自动跳转到当前示例；也可以直接访问 <http://127.0.0.1:5173/height-map> 或 <http://127.0.0.1:5173/offscreen-height-map>。
+打开 <http://127.0.0.1:5173/>，应用会自动跳转到当前示例；也可以直接访问 <http://127.0.0.1:5173/height-map>、<http://127.0.0.1:5173/offscreen-height-map> 或 <http://127.0.0.1:5173/normal-map>。
 
 ### 4. 构建和预览生产版本
 
@@ -126,17 +142,23 @@ npm run preview
     │   ├── heightmap/
     │   │   ├── HeightMapGenerator.js
     │   │   └── HeightMapVisualizer.js  # 两个高度图示例共用
-    │   └── offscreen-heightmap/
-    │       └── OffscreenHeightMapGenerator.js
+    │   ├── offscreen-heightmap/
+    │   │   └── OffscreenHeightMapGenerator.js
+    │   └── normal-map/
+    │       └── NormalMapShader.js       # 深度后处理法线 shader
     └── views/
         ├── heightmap/
         │   ├── HeightMap.vue           # 地形高度图示例页面
         │   └── js/
         │       └── HeightMapMapWorks.js # Viewer 生命周期和交互控制
-        └── offscreen-heightmap/
-            ├── OffscreenHeightMap.vue  # 离屏高度图示例页面
+        ├── offscreen-heightmap/
+        │   ├── OffscreenHeightMap.vue  # 离屏高度图示例页面
+        │   └── js/
+        │       └── OffscreenHeightMapMapWorks.js
+        └── normal-map/
+            ├── NormalMap.vue            # 后处理法线图示例页面
             └── js/
-                └── OffscreenHeightMapMapWorks.js
+                └── NormalMapMapWorks.js
 ```
 
 ## 添加新的示例

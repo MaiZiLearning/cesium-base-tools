@@ -17,6 +17,12 @@ const routes = [
     component: () => import("../views/offscreen-heightmap/OffscreenHeightMap.vue"),
     meta: { title: "离屏渲染高度图", icon: "▧" },
   },
+  {
+    path: "/normal-map",
+    name: "NormalMap",
+    component: () => import("../views/normal-map/NormalMap.vue"),
+    meta: { title: "后处理法线图", icon: "◈" },
+  },
 ];
 
 export default createRouter({
