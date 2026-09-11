@@ -52,7 +52,7 @@
 - 使用特殊背景色标识没有有效深度的天空区域
 - 通过图例说明 RGB 与视空间法线分量的对应关系
 - 关闭法线模式时恢复 3D Tiles 原始画面
-- 独立展示法线重建，不包含 SSR 的光线步进、反射采样和反射合成
+- 独立展示法线重建
 
 ## 技术栈
 
@@ -105,7 +105,7 @@ Copy-Item .env.example .env.local
 npm run dev
 ```
 
-打开 <http://127.0.0.1:5173/>，应用会自动跳转到当前示例；也可以直接访问 <http://127.0.0.1:5173/height-map>、<http://127.0.0.1:5173/offscreen-height-map> 或 <http://127.0.0.1:5173/normal-map>。
+打开 [http://127.0.0.1:5173/](http://127.0.0.1:5173/)，应用会自动跳转到当前示例；也可以直接访问 [http://127.0.0.1:5173/height-map](http://127.0.0.1:5173/height-map)、[http://127.0.0.1:5173/offscreen-height-map](http://127.0.0.1:5173/offscreen-height-map) 或 [http://127.0.0.1:5173/normal-map](http://127.0.0.1:5173/normal-map)。
 
 ### 4. 构建和预览生产版本
 
@@ -116,11 +116,12 @@ npm run preview
 
 ## npm scripts
 
-| 命令 | 说明 |
-| --- | --- |
-| `npm run dev` | 启动 Vite 开发服务器 |
-| `npm run build` | 构建生产版本到 `dist/` |
-| `npm run preview` | 本地预览生产构建结果 |
+
+| 命令              | 说明                  |
+| ----------------- | --------------------- |
+| `npm run dev`     | 启动 Vite 开发服务器  |
+| `npm run build`   | 构建生产版本到`dist/` |
+| `npm run preview` | 本地预览生产构建结果  |
 
 ## 项目结构
 
