@@ -6,7 +6,7 @@ const SCGIS_TILESET_URL =
   "https://www.scgis.net/services/longchang_3dtiles/file/tileset.json?ak=623d2c5223vxqc44b2cd3832989bfc21";
 
 const params = {
-  normalMode: true,
+  normalMode: false,
   status: "正在加载 3DTiles...",
 };
 

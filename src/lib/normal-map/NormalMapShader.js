@@ -1,8 +1,6 @@
 ﻿/**
  * @Description: 从场景深度纹理重建视空间法线的后处理着色器
  *
- * 从 SSRShaders.js 的 SSRShader 中提取 getViewPosition、getViewNormal
- * 和深度读取部分，仅保留法线重建与 RGB 编码，不包含 SSR 反射计算。
  * 法线通过相邻像素的视空间位置叉乘获得：
  * 1. 使用 depthTexture 和 Cesium 内置矩阵还原中心及四邻域位置
  * 2. 由相邻位置差计算切线，再叉乘得到法线
